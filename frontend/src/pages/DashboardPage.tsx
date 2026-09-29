@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   Mail, 
   ShieldAlert, 
@@ -8,8 +8,11 @@ import {
   Fingerprint, 
   Layers, 
   Flame, 
-  ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Radio,
+  Clock,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -42,14 +45,100 @@ const riskDistData = [
   { name: 'Low', value: 240, color: '#38D39F' },
 ];
 
+interface MonitoringStatus {
+  monitoring_active: boolean;
+  mode: string;
+  last_sync: string | null;
+  last_event: string | null;
+  messages_processed: number;
+  processing_errors: number;
+  watch_status: string;
+  watch_expiry: string | null;
+  pubsub_configured: boolean;
+}
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const [monitor, setMonitor] = useState<MonitoringStatus>({
+    monitoring_active: false,
+    mode: 'INACTIVE',
+    last_sync: null,
+    last_event: null,
+    messages_processed: 0,
+    processing_errors: 0,
+    watch_status: 'UNREGISTERED',
+    watch_expiry: null,
+    pubsub_configured: false,
+  });
+
+  const fetchMonitoringTelemetry = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/monitor/status');
+      if (res.ok) {
+        const data = await res.json();
+        setMonitor(data);
+      }
+    } catch {
+      // offline/mock
+    }
+  };
+
+  useEffect(() => {
+    fetchMonitoringTelemetry();
+    const interval = setInterval(fetchMonitoringTelemetry, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-6">
+      {/* Real Monitoring Telemetry Banner */}
+      <div className="bg-surface-default border border-surface-border rounded-xl p-4 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${monitor.monitoring_active ? 'bg-status-low shadow-[0_0_10px_#38D39F]' : 'bg-status-critical'}`} />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-text-primary font-mono uppercase tracking-wider">
+                  Gmail Event Telemetry: {monitor.monitoring_active ? 'Active' : 'Standby'}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-surface-card border border-surface-border text-teal-accent">
+                  Mode: {monitor.mode === 'PUBSUB_PUSH' ? 'Google Cloud Pub/Sub (Production)' : monitor.mode === 'DEV_POLLING' ? 'Development Polling Fallback' : 'Inactive'}
+                </span>
+              </div>
+              <p className="text-[11px] text-text-muted mt-0.5">
+                {monitor.mode === 'PUBSUB_PUSH'
+                  ? 'Push notifications ingested via Gmail Watch & Google Cloud Pub/Sub Webhook.'
+                  : 'Development polling active. Configure Google Cloud Pub/Sub in .env for production push triggers.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-text-secondary border-t md:border-t-0 md:border-l border-surface-border pt-2 md:pt-0 md:pl-4">
+            <div>
+              <span className="text-[10px] text-text-muted block">WATCH EXPIRY</span>
+              <span className={monitor.watch_status === 'ACTIVE' ? 'text-status-low font-bold' : 'text-text-muted'}>
+                {monitor.watch_expiry ? new Date(monitor.watch_expiry).toLocaleDateString() : 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-text-muted block">LAST SYNC</span>
+              <span className="text-text-primary">
+                {monitor.last_sync ? new Date(monitor.last_sync).toLocaleTimeString() : 'Never'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-text-muted block">ERRORS</span>
+              <span className={monitor.processing_errors > 0 ? 'text-status-critical font-bold' : 'text-status-low'}>
+                {monitor.processing_errors}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top 8 SOC Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Emails Analyzed" value="12,482" change="+8.4%" isPositive icon={<Mail className="w-5 h-5" />} />
+        <MetricCard title="Emails Analyzed" value={monitor.messages_processed > 0 ? monitor.messages_processed.toLocaleString() : "12,482"} change="+8.4%" isPositive icon={<Mail className="w-5 h-5" />} />
         <MetricCard title="Phishing Detected" value="48" change="+12%" isPositive={false} icon={<ShieldAlert className="w-5 h-5" />} />
         <MetricCard title="Warnings Issued" value="92" change="-3.1%" isPositive icon={<AlertTriangle className="w-5 h-5" />} />
         <MetricCard title="Quarantined" value="38" change="+15%" isPositive={false} icon={<Lock className="w-5 h-5" />} />
@@ -61,7 +150,6 @@ export const DashboardPage: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Threat Trend Chart */}
         <div className="lg:col-span-2 bg-surface-default border border-surface-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -101,7 +189,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Risk Distribution Chart */}
         <div className="bg-surface-default border border-surface-border rounded-xl p-5 shadow-sm flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-semibold text-text-primary tracking-wide">Risk Distribution</h2>
