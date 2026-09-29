@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
@@ -10,6 +10,7 @@ import { CopilotPage } from './pages/CopilotPage';
 import { DemoCenterPage } from './pages/DemoCenterPage';
 import { GmailConnectionPage } from './pages/GmailConnectionPage';
 import { GenericPage } from './pages/GenericPages';
+import { IdentityAnalysisPage } from './pages/IdentityAnalysisPage';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -26,6 +27,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       case '/incidents': return 'Security Incident Response';
       case '/copilot': return 'TRINETRA SOC Co-Pilot';
       case '/demo': return 'Interactive Threat Simulation Center';
+      case '/analyze/identity': return 'Identity & Spoofing Intelligence';
       case '/gmail': return 'Gmail OAuth & Pub/Sub Connection';
       case '/health': return 'Platform Service Diagnostics';
       case '/settings': return 'SOC System Settings';
@@ -57,6 +59,7 @@ export const App: React.FC = () => {
           <Route path="/graph" element={<ThreatGraphPage />} />
           <Route path="/live-emails" element={<LiveEmailsPage />} />
           <Route path="/investigations" element={<InvestigationPage />} />
+          <Route path="/analyze/identity" element={<IdentityAnalysisPage />} />
           <Route path="/quarantine" element={<GenericPage title="Quarantine Vault" subtitle="Isolated high-risk email messages held for compliance and inspection" />} />
           <Route path="/incidents" element={<GenericPage title="Incident Management" subtitle="Formal incident tracking, escalation protocols, and analyst assignments" />} />
           <Route path="/copilot" element={<CopilotPage />} />

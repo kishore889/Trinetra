@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   ShieldAlert, 
@@ -13,7 +13,8 @@ import {
   Settings, 
   HeartPulse, 
   Sparkles,
-  Eye
+  Eye,
+  UserCheck
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -37,6 +38,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: 'Live Emails', path: '/live-emails', icon: Mail },
         { name: 'Investigations', path: '/investigations', icon: Search },
+        { name: 'Identity & Spoofing', path: '/analyze/identity', icon: UserCheck },
         { name: 'Quarantine', path: '/quarantine', icon: Lock }
       ]
     },
