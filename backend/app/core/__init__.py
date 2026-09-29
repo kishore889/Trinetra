@@ -1,0 +1,3 @@
+﻿"""
+TRINETRA Backend — Core Package
+"""

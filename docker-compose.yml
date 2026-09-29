@@ -1,0 +1,86 @@
+﻿version: "3.9"
+
+# ==================================================
+# TRINETRA — Docker Compose
+# ==================================================
+
+services:
+  # ------------------------------------------------
+  # PostgreSQL Database
+  # ------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: trinetra_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trinetra
+      POSTGRES_USER: trinetra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trinetra_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - trinetra_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trinetra -d trinetra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - trinetra_net
+
+  # ------------------------------------------------
+  # TRINETRA Backend (FastAPI)
+  # ------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: trinetra_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://trinetra:${POSTGRES_PASSWORD:-trinetra_dev}@db:5432/trinetra
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-changeme_in_production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      GOOGLE_SAFE_BROWSING_API_KEY: ${GOOGLE_SAFE_BROWSING_API_KEY:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+      - ./models:/models
+    networks:
+      - trinetra_net
+    labels:
+      com.trinetra.service: "backend"
+      com.trinetra.version: "1.0.0"
+
+# ------------------------------------------------
+# Frontend (Phase 3+) — placeholder
+# ------------------------------------------------
+# frontend:
+#   build:
+#     context: ./frontend
+#     dockerfile: ../docker/Dockerfile.frontend
+#   container_name: trinetra_frontend
+#   ports:
+#     - "5173:5173"
+#   networks:
+#     - trinetra_net
+
+volumes:
+  trinetra_pgdata:
+    name: trinetra_pgdata
+
+networks:
+  trinetra_net:
+    name: trinetra_net
+    driver: bridge
