@@ -1,4 +1,4 @@
-﻿# ==================================================
+# ==================================================
 # TRINETRA Backend — Python Dependencies
 # ==================================================
 
@@ -30,6 +30,9 @@ python-dotenv==1.0.1
 
 # --- Date/Time ---
 python-dateutil==2.9.0
+
+# --- Graph Intelligence ---
+networkx>=3.0
 
 # --- Testing ---
 pytest==8.3.3
