@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     content_analysis,
     url_analysis,
     identity_analysis,
+    threat_intel,
 )
 
 api_router = APIRouter()
@@ -21,3 +22,4 @@ api_router.include_router(monitoring.router, prefix="/monitor", tags=["Monitorin
 api_router.include_router(content_analysis.router, prefix="/analyze/content", tags=["Content Intelligence"])
 api_router.include_router(url_analysis.router, prefix="/analyze/url", tags=["URL & Domain Intelligence"])
 api_router.include_router(identity_analysis.router, prefix="/analyze/identity", tags=["Identity & Spoofing Intelligence"])
+api_router.include_router(threat_intel.router, prefix="/threat-intel", tags=["Threat Intelligence"])
