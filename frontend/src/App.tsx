@@ -8,6 +8,7 @@ import { InvestigationPage } from './pages/InvestigationPage';
 import { ThreatGraphPage } from './pages/ThreatGraphPage';
 import { CopilotPage } from './pages/CopilotPage';
 import { DemoCenterPage } from './pages/DemoCenterPage';
+import { GmailConnectionPage } from './pages/GmailConnectionPage';
 import { GenericPage } from './pages/GenericPages';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,7 +61,7 @@ export const App: React.FC = () => {
           <Route path="/incidents" element={<GenericPage title="Incident Management" subtitle="Formal incident tracking, escalation protocols, and analyst assignments" />} />
           <Route path="/copilot" element={<CopilotPage />} />
           <Route path="/demo" element={<DemoCenterPage />} />
-          <Route path="/gmail" element={<GenericPage title="Gmail Integration" subtitle="OAuth 2.0 configuration, Watch trigger registration, and Pub/Sub credentials" />} />
+          <Route path="/gmail" element={<GmailConnectionPage />} />
           <Route path="/health" element={<GenericPage title="System Health" subtitle="Real-time status of backend services, PostgreSQL connection, and detection layers" />} />
           <Route path="/settings" element={<GenericPage title="Platform Settings" subtitle="Risk engine weights, sensitivity thresholds, and notifications" />} />
         </Routes>
