@@ -1,16 +1,107 @@
-﻿import React, { useState } from 'react';
-import { Mail, RefreshCw, AlertOctagon, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
-import { mockLiveEmails } from '../data/mockData';
+﻿import React, { useState, useEffect } from 'react';
+import { RefreshCw, AlertOctagon, CheckCircle2, Clock, ShieldCheck, UploadCloud, Link as LinkIcon, Paperclip } from 'lucide-react';
 import { ThreatBadge, DecisionBadge } from '../components/UIElements';
-import { EmailProcessingState } from '../types';
+import type { EmailProcessingState } from '../types';
+
+interface IngestedEmail {
+  id: string;
+  message_id: string;
+  sender: string;
+  sender_domain: string;
+  recipient: string;
+  subject: string;
+  received_at: string;
+  state: EmailProcessingState;
+  spf_result?: string;
+  dkim_result?: string;
+  dmarc_result?: string;
+  urls_count: number;
+  attachments_count: number;
+}
 
 export const LiveEmailsPage: React.FC = () => {
-  const [emails, setEmails] = useState(mockLiveEmails);
+  const [emails, setEmails] = useState<IngestedEmail[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleRefresh = () => {
+  const fetchLiveEmails = async () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 600);
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/emails?limit=50');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setEmails(data);
+          return;
+        }
+      }
+    } catch {
+      // offline / mock fallback
+    } finally {
+      setIsRefreshing(false);
+    }
+
+    // Default mock preview if backend inbox is empty
+    setEmails([
+      {
+        id: 'mock-1',
+        message_id: 'msg-9921@micros0ft-support.com',
+        sender: 'security-update@micros0ft-support.com',
+        sender_domain: 'micros0ft-support.com',
+        recipient: 'cfo@company.com',
+        subject: 'Urgent: Verify Your Microsoft 365 Account Immediately',
+        received_at: new Date().toISOString(),
+        state: 'ANALYZED',
+        spf_result: 'FAIL',
+        dkim_result: 'NONE',
+        dmarc_result: 'FAIL',
+        urls_count: 2,
+        attachments_count: 0,
+      },
+      {
+        id: 'mock-2',
+        message_id: 'msg-9922@vendor-corp.net',
+        sender: 'billing@vendor-corp.net',
+        sender_domain: 'vendor-corp.net',
+        recipient: 'accounts@company.com',
+        subject: 'Remittance Advisory #INV-4921',
+        received_at: new Date(Date.now() - 360000).toISOString(),
+        state: 'ACTION_PENDING',
+        spf_result: 'PASS',
+        dkim_result: 'PASS',
+        dmarc_result: 'PASS',
+        urls_count: 1,
+        attachments_count: 1,
+      },
+    ]);
+  };
+
+  useEffect(() => {
+    fetchLiveEmails();
+  }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/emails/ingest-raw', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        await fetchLiveEmails();
+      }
+    } catch {
+      // handled
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   };
 
   const getStateBadge = (state: EmailProcessingState) => {
@@ -36,18 +127,27 @@ export const LiveEmailsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-text-primary">Live Email Ingestion & Telemetry</h2>
+          <h2 className="text-base font-semibold text-text-primary tracking-wide">Live Email Ingestion & Telemetry</h2>
           <p className="text-xs text-text-muted">Real-time Gmail Pub/Sub push feed tracking multi-state processing</p>
         </div>
-        <button 
-          onClick={handleRefresh}
-          className="flex items-center gap-2 bg-surface-default hover:bg-surface-hover border border-surface-border text-xs px-3 py-1.5 rounded-lg text-text-primary transition-all hover:border-teal-accent/50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-teal-accent ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>Refresh Feed</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* File Upload for .eml RFC 822 MIME Testing */}
+          <label className="cursor-pointer flex items-center gap-2 bg-surface-card hover:bg-surface-hover border border-teal-accent/40 text-xs px-3 py-1.5 rounded-lg text-teal-accent transition-all shadow-teal-glow">
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>{isUploading ? 'Ingesting MIME...' : 'Ingest .EML File'}</span>
+            <input type="file" accept=".eml,.msg,.txt" onChange={handleFileUpload} className="hidden" />
+          </label>
+
+          <button 
+            onClick={fetchLiveEmails}
+            className="flex items-center gap-2 bg-surface-default hover:bg-surface-hover border border-surface-border text-xs px-3 py-1.5 rounded-lg text-text-primary transition-all hover:border-teal-accent/50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-teal-accent ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh Feed</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-surface-default border border-surface-border rounded-xl overflow-hidden shadow-sm">
@@ -55,14 +155,13 @@ export const LiveEmailsPage: React.FC = () => {
           <table className="w-full text-left text-xs text-text-secondary">
             <thead className="bg-bg-darkest/60 text-text-muted font-mono uppercase tracking-wider text-[10px] border-b border-surface-border">
               <tr>
-                <th className="py-3 px-4">Status / State</th>
+                <th className="py-3 px-4">Processing State</th>
                 <th className="py-3 px-4">Subject</th>
                 <th className="py-3 px-4">Sender</th>
-                <th className="py-3 px-4">Threat Signals</th>
-                <th className="py-3 px-4">Risk</th>
-                <th className="py-3 px-4">Severity</th>
-                <th className="py-3 px-4">Action</th>
-                <th className="py-3 px-4">Time</th>
+                <th className="py-3 px-4">Domain</th>
+                <th className="py-3 px-4">Auth (SPF/DKIM/DMARC)</th>
+                <th className="py-3 px-4">IOC Entities</th>
+                <th className="py-3 px-4">Ingested At</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border font-sans">
@@ -77,28 +176,38 @@ export const LiveEmailsPage: React.FC = () => {
                   <td className="py-3 px-4 font-mono text-[11px] text-teal-accent/90 max-w-[180px] truncate">
                     {email.sender}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-wrap gap-1 max-w-xs">
-                      {email.threatSignals.map((signal, sIdx) => (
-                        <span key={sIdx} className="bg-surface-card border border-surface-border text-text-secondary text-[10px] px-1.5 py-0.5 rounded">
-                          {signal}
-                        </span>
-                      ))}
-                    </div>
+                  <td className="py-3 px-4 font-mono text-[11px] text-text-secondary">
+                    {email.sender_domain}
                   </td>
-                  <td className="py-3 px-4 font-mono font-bold">
-                    <span className={email.riskScore >= 70 ? 'text-status-critical' : email.riskScore >= 40 ? 'text-status-high' : 'text-status-low'}>
-                      {email.riskScore}
+                  <td className="py-3 px-4 font-mono text-[10px]">
+                    <span className="flex items-center gap-1.5">
+                      <span className={email.spf_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
+                        SPF:{email.spf_result || 'N/A'}
+                      </span>
+                      <span>•</span>
+                      <span className={email.dkim_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
+                        DKIM:{email.dkim_result || 'N/A'}
+                      </span>
+                      <span>•</span>
+                      <span className={email.dmarc_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
+                        DMARC:{email.dmarc_result || 'N/A'}
+                      </span>
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <ThreatBadge severity={email.severity} />
-                  </td>
-                  <td className="py-3 px-4">
-                    <DecisionBadge decision={email.action} />
+                    <div className="flex items-center gap-3 text-text-muted font-mono text-[11px]">
+                      <span className="flex items-center gap-1" title="Extracted URLs">
+                        <LinkIcon className="w-3 h-3 text-teal-accent" />
+                        <span>{email.urls_count}</span>
+                      </span>
+                      <span className="flex items-center gap-1" title="Attachments (Metadata only)">
+                        <Paperclip className="w-3 h-3 text-text-secondary" />
+                        <span>{email.attachments_count}</span>
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3 px-4 font-mono text-[11px] text-text-muted whitespace-nowrap">
-                    {email.receivedAt}
+                    {new Date(email.received_at).toLocaleTimeString()}
                   </td>
                 </tr>
               ))}
