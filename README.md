@@ -1,9 +1,9 @@
 # TRINETRA — AI-Powered Real-Time Phishing Detection & Threat Intelligence System
 
 > **Identity:** TRINETRA Dark Teal SOC  
-> **Backend Status:** ✅ 247 / 247 PASSING TESTS  
-> **Frontend Status:** ✅ REACT 18 + VITE BUILD CLEAN  
-> **Security Posture:** ✅ HARDENED (JWT, RBAC, OWASP Headers, SSRF, XSS, Rate Limiting)  
+> **Backend Status:** 247 / 247 PASSING TESTS  
+> **Frontend Status:**  REACT 18 + VITE BUILD CLEAN  
+> **Security Posture:**  HARDENED (JWT, RBAC, OWASP Headers, SSRF, XSS, Rate Limiting)  
 
 ---
 
