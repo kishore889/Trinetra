@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for Gmail Monitoring: Pub/Sub Webhook parsing, Watch expiration tracking,
 and status endpoint.
 """
@@ -34,7 +34,7 @@ def test_monitoring_status_endpoint():
         assert "watch_status" in data
         assert data["messages_processed"] == 5
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)
 
 
 def test_pubsub_webhook_event_decoding():
@@ -64,4 +64,4 @@ def test_pubsub_webhook_event_decoding():
         data = response.json()
         assert data["status"] in ["acknowledged", "synced"]
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)

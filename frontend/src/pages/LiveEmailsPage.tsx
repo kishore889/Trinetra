@@ -1,7 +1,20 @@
-﻿import React, { useState, useEffect } from 'react';
-import { RefreshCw, AlertOctagon, CheckCircle2, Clock, ShieldCheck, UploadCloud, Link as LinkIcon, Paperclip } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  RefreshCw,
+  AlertOctagon,
+  CheckCircle2,
+  Clock,
+  ShieldCheck,
+  UploadCloud,
+  Link as LinkIcon,
+  Paperclip,
+  Loader2,
+  AlertTriangle,
+  Mail,
+  Search,
+  Filter,
+} from 'lucide-react';
 import { ThreatBadge, DecisionBadge } from '../components/UIElements';
-import type { EmailProcessingState } from '../types';
 
 interface IngestedEmail {
   id: string;
@@ -11,7 +24,7 @@ interface IngestedEmail {
   recipient: string;
   subject: string;
   received_at: string;
-  state: EmailProcessingState;
+  state: string;
   spf_result?: string;
   dkim_result?: string;
   dmarc_result?: string;
@@ -21,64 +34,56 @@ interface IngestedEmail {
 
 export const LiveEmailsPage: React.FC = () => {
   const [emails, setEmails] = useState<IngestedEmail[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [stateFilter, setStateFilter] = useState<string>('ALL');
 
   const fetchLiveEmails = async () => {
-    setIsRefreshing(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/emails?limit=50');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setEmails(data);
-          return;
-        }
-      }
-    } catch {
-      // offline / mock fallback
+      setError(null);
+      const res = await fetch('/api/v1/emails?limit=100');
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch live email stream.`);
+      const data = await res.json();
+      setEmails(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch live emails from backend');
     } finally {
+      setLoading(false);
       setIsRefreshing(false);
     }
-
-    // Default mock preview if backend inbox is empty
-    setEmails([
-      {
-        id: 'mock-1',
-        message_id: 'msg-9921@micros0ft-support.com',
-        sender: 'security-update@micros0ft-support.com',
-        sender_domain: 'micros0ft-support.com',
-        recipient: 'cfo@company.com',
-        subject: 'Urgent: Verify Your Microsoft 365 Account Immediately',
-        received_at: new Date().toISOString(),
-        state: 'ANALYZED',
-        spf_result: 'FAIL',
-        dkim_result: 'NONE',
-        dmarc_result: 'FAIL',
-        urls_count: 2,
-        attachments_count: 0,
-      },
-      {
-        id: 'mock-2',
-        message_id: 'msg-9922@vendor-corp.net',
-        sender: 'billing@vendor-corp.net',
-        sender_domain: 'vendor-corp.net',
-        recipient: 'accounts@company.com',
-        subject: 'Remittance Advisory #INV-4921',
-        received_at: new Date(Date.now() - 360000).toISOString(),
-        state: 'ACTION_PENDING',
-        spf_result: 'PASS',
-        dkim_result: 'PASS',
-        dmarc_result: 'PASS',
-        urls_count: 1,
-        attachments_count: 1,
-      },
-    ]);
   };
 
   useEffect(() => {
     fetchLiveEmails();
+
+    // Listen for SSE real-time events
+    let sse: EventSource | null = null;
+    try {
+      sse = new EventSource('/api/v1/realtime/stream');
+      sse.onmessage = () => {
+        fetchLiveEmails();
+      };
+    } catch {}
+
+    const interval = setInterval(fetchLiveEmails, 8000);
+    return () => {
+      if (sse) sse.close();
+      clearInterval(interval);
+    };
   }, []);
+
+  const handleManualPoll = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetch('/api/v1/monitor/poll', { method: 'POST' });
+      await fetchLiveEmails();
+    } catch {
+      await fetchLiveEmails();
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,132 +94,187 @@ export const LiveEmailsPage: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/emails/ingest-raw', {
+      const res = await fetch('/api/v1/emails/ingest-raw', {
         method: 'POST',
         body: formData,
       });
       if (res.ok) {
         await fetchLiveEmails();
+      } else {
+        alert('File ingestion failed: Server returned error.');
       }
-    } catch {
-      // handled
+    } catch (err: any) {
+      alert(`MIME Ingestion error: ${err.message}`);
     } finally {
       setIsUploading(false);
-      e.target.value = '';
     }
   };
 
-  const getStateBadge = (state: EmailProcessingState) => {
-    const map: Record<EmailProcessingState, { label: string; color: string; icon: any }> = {
-      RECEIVED: { label: 'Received', color: 'text-text-muted border-text-muted/30', icon: Clock },
-      PARSING: { label: 'Parsing', color: 'text-teal-accent border-teal-accent/30', icon: RefreshCw },
-      ANALYZING: { label: 'Analyzing', color: 'text-status-medium border-status-medium/30', icon: RefreshCw },
-      ANALYZED: { label: 'Analyzed', color: 'text-teal-vibrant border-teal-vibrant/30', icon: CheckCircle2 },
-      ACTION_PENDING: { label: 'Action Pending', color: 'text-status-high border-status-high/30', icon: AlertOctagon },
-      ACTIONED: { label: 'Actioned', color: 'text-status-low border-status-low/30', icon: ShieldCheck },
-      FAILED: { label: 'Failed', color: 'text-status-critical border-status-critical/30', icon: AlertOctagon },
-    };
-    const config = map[state] || map.RECEIVED;
-    const Icon = config.icon;
+  const filteredEmails = emails.filter((em) => {
+    const matchesSearch =
+      em.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      em.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      em.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      em.message_id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono border ${config.color} bg-bg-darkest/40`}>
-        <Icon className={`w-3 h-3 ${state === 'ANALYZING' || state === 'PARSING' ? 'animate-spin' : ''}`} />
-        {config.label}
-      </span>
-    );
-  };
+    const matchesState = stateFilter === 'ALL' || em.state === stateFilter;
+    return matchesSearch && matchesState;
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
-          <h2 className="text-base font-semibold text-text-primary tracking-wide">Live Email Ingestion & Telemetry</h2>
-          <p className="text-xs text-text-muted">Real-time Gmail Pub/Sub push feed tracking multi-state processing</p>
+          <div className="flex items-center gap-2">
+            <Mail className="w-6 h-6 text-teal-accent" />
+            <h1 className="text-xl font-bold text-text-primary tracking-wide font-mono uppercase">
+              Live Email Ingestion & Stream Monitoring
+            </h1>
+          </div>
+          <p className="text-xs text-text-secondary mt-1 font-mono">
+            Zero-execution MIME parsing, technical authentication (SPF/DKIM/DMARC), and live ingestion monitoring.
+          </p>
         </div>
+
         <div className="flex items-center gap-3">
-          {/* File Upload for .eml RFC 822 MIME Testing */}
-          <label className="cursor-pointer flex items-center gap-2 bg-surface-card hover:bg-surface-hover border border-teal-accent/40 text-xs px-3 py-1.5 rounded-lg text-teal-accent transition-all shadow-teal-glow">
-            <UploadCloud className="w-3.5 h-3.5" />
+          <label className="cursor-pointer flex items-center gap-2 bg-teal-accent hover:bg-teal-vibrant text-bg-darkest font-mono text-xs font-bold px-3.5 py-2 rounded transition-all shadow-teal-glow">
+            <UploadCloud className="w-4 h-4" />
             <span>{isUploading ? 'Ingesting MIME...' : 'Ingest .EML File'}</span>
             <input type="file" accept=".eml,.msg,.txt" onChange={handleFileUpload} className="hidden" />
           </label>
 
-          <button 
-            onClick={fetchLiveEmails}
-            className="flex items-center gap-2 bg-surface-default hover:bg-surface-hover border border-surface-border text-xs px-3 py-1.5 rounded-lg text-text-primary transition-all hover:border-teal-accent/50"
+          <button
+            onClick={handleManualPoll}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-surface-card border border-teal-accent/40 hover:border-teal-accent text-teal-accent font-mono text-xs px-3.5 py-2 rounded transition-all"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-teal-accent ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh Feed</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Trigger Polling</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-surface-default border border-surface-border rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-secondary">
-            <thead className="bg-bg-darkest/60 text-text-muted font-mono uppercase tracking-wider text-[10px] border-b border-surface-border">
-              <tr>
-                <th className="py-3 px-4">Processing State</th>
-                <th className="py-3 px-4">Subject</th>
-                <th className="py-3 px-4">Sender</th>
-                <th className="py-3 px-4">Domain</th>
-                <th className="py-3 px-4">Auth (SPF/DKIM/DMARC)</th>
-                <th className="py-3 px-4">IOC Entities</th>
-                <th className="py-3 px-4">Ingested At</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border font-sans">
-              {emails.map((email) => (
-                <tr key={email.id} className="hover:bg-surface-hover/80 transition-colors">
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    {getStateBadge(email.state)}
-                  </td>
-                  <td className="py-3 px-4 font-medium text-text-primary max-w-sm truncate">
-                    {email.subject}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-teal-accent/90 max-w-[180px] truncate">
-                    {email.sender}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-text-secondary">
-                    {email.sender_domain}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[10px]">
-                    <span className="flex items-center gap-1.5">
-                      <span className={email.spf_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
-                        SPF:{email.spf_result || 'N/A'}
-                      </span>
-                      <span>•</span>
-                      <span className={email.dkim_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
-                        DKIM:{email.dkim_result || 'N/A'}
-                      </span>
-                      <span>•</span>
-                      <span className={email.dmarc_result === 'PASS' ? 'text-status-low' : 'text-status-critical'}>
-                        DMARC:{email.dmarc_result || 'N/A'}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3 text-text-muted font-mono text-[11px]">
-                      <span className="flex items-center gap-1" title="Extracted URLs">
-                        <LinkIcon className="w-3 h-3 text-teal-accent" />
-                        <span>{email.urls_count}</span>
-                      </span>
-                      <span className="flex items-center gap-1" title="Attachments (Metadata only)">
-                        <Paperclip className="w-3 h-3 text-text-secondary" />
-                        <span>{email.attachments_count}</span>
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-text-muted whitespace-nowrap">
-                    {new Date(email.received_at).toLocaleTimeString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Filter Bar */}
+      <div className="bg-surface-default border border-surface-border rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs">
+        <div className="relative w-full sm:w-72">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-text-muted" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by sender, subject, message ID..."
+            className="w-full bg-bg-darkest border border-surface-border rounded-md pl-8 pr-3 py-1.5 text-text-primary focus:outline-none focus:border-teal-accent"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="w-3.5 h-3.5 text-text-muted" />
+          <span className="text-text-muted uppercase text-[10px]">State:</span>
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="bg-bg-darkest border border-surface-border rounded p-1.5 text-text-primary focus:outline-none focus:border-teal-accent"
+          >
+            <option value="ALL">All States ({emails.length})</option>
+            <option value="RECEIVED">RECEIVED</option>
+            <option value="ANALYZING">ANALYZING</option>
+            <option value="QUARANTINED">QUARANTINED</option>
+            <option value="RELEASED">RELEASED</option>
+            <option value="SAFE">SAFE</option>
+            <option value="REVIEW">REVIEW</option>
+          </select>
         </div>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-surface-default border border-surface-border rounded-xl p-8 text-center font-mono text-teal-accent flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Fetching live email stream from database...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-status-critical/10 border border-status-critical/40 rounded-xl p-4 flex items-center justify-between text-xs font-mono text-status-critical">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
+          <button onClick={fetchLiveEmails} className="underline font-bold">Retry</button>
+        </div>
+      )}
+
+      {/* Email List Table */}
+      {!loading && !error && (
+        <div className="bg-surface-default border border-surface-border rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-bg-darkest/70 text-text-muted uppercase text-[10px] border-b border-surface-border">
+                <tr>
+                  <th className="py-3 px-4">State</th>
+                  <th className="py-3 px-4">Message ID</th>
+                  <th className="py-3 px-4">Subject</th>
+                  <th className="py-3 px-4">Sender</th>
+                  <th className="py-3 px-4">Recipient</th>
+                  <th className="py-3 px-4">SPF / DKIM / DMARC</th>
+                  <th className="py-3 px-4">URLs</th>
+                  <th className="py-3 px-4">Received</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {filteredEmails.map((em) => (
+                  <tr key={em.id} className="hover:bg-surface-hover/80 transition-colors">
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        em.state === 'QUARANTINED' ? 'bg-status-critical/20 border-status-critical/50 text-status-critical' :
+                        em.state === 'SAFE' || em.state === 'RELEASED' ? 'bg-teal-accent/20 border-teal-accent/50 text-teal-accent' :
+                        em.state === 'REVIEW' ? 'bg-status-medium/20 border-status-medium/50 text-status-medium' :
+                        'bg-surface-card border-surface-border text-text-secondary'
+                      }`}>
+                        {em.state}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-text-muted max-w-[140px] truncate">{em.message_id}</td>
+                    <td className="py-3 px-4 text-text-primary font-bold max-w-xs truncate">{em.subject}</td>
+                    <td className="py-3 px-4 text-teal-accent max-w-[180px] truncate">{em.sender}</td>
+                    <td className="py-3 px-4 text-text-secondary max-w-[180px] truncate">{em.recipient}</td>
+                    <td className="py-3 px-4 whitespace-nowrap text-[10px]">
+                      <span className={`mr-1 px-1 rounded ${em.spf_result === 'pass' ? 'text-status-low bg-status-low/10' : 'text-status-critical bg-status-critical/10'}`}>
+                        SPF:{em.spf_result || 'none'}
+                      </span>
+                      <span className={`mr-1 px-1 rounded ${em.dkim_result === 'pass' ? 'text-status-low bg-status-low/10' : 'text-status-critical bg-status-critical/10'}`}>
+                        DKIM:{em.dkim_result || 'none'}
+                      </span>
+                      <span className={`px-1 rounded ${em.dmarc_result === 'pass' ? 'text-status-low bg-status-low/10' : 'text-status-critical bg-status-critical/10'}`}>
+                        DMARC:{em.dmarc_result || 'none'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className="flex items-center gap-1 text-text-muted">
+                        <LinkIcon className="w-3 h-3 text-teal-accent" />
+                        {em.urls_count}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-text-muted whitespace-nowrap text-[11px]">
+                      {new Date(em.received_at).toLocaleTimeString()}
+                    </td>
+                  </tr>
+                ))}
+
+                {filteredEmails.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-text-muted">
+                      No emails found in live stream matching selected criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

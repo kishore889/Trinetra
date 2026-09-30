@@ -1,4 +1,4 @@
-﻿"""
+"""
 TRINETRA — Exception Definitions & Global Exception Handlers
 
 Defines all application-level exceptions and FastAPI exception handlers
@@ -37,12 +37,25 @@ class TRINETRAException(Exception):
 class ResourceNotFoundError(TRINETRAException):
     """Raised when a requested resource does not exist."""
 
-    def __init__(self, resource: str, identifier: str) -> None:
+    def __init__(self, resource: str, identifier: str = "") -> None:
+        msg = f"{resource} with identifier '{identifier}' not found." if identifier else resource
         super().__init__(
-            message=f"{resource} with identifier '{identifier}' not found.",
+            message=msg,
             error_code="RESOURCE_NOT_FOUND",
             status_code=status.HTTP_404_NOT_FOUND,
         )
+
+
+class SafetyViolationError(TRINETRAException):
+    """Raised when an operation violates TRINETRA safety policies (e.g., permanent deletion)."""
+
+    def __init__(self, message: str = "Operation violates safety policies.") -> None:
+        super().__init__(
+            message=message,
+            error_code="SAFETY_VIOLATION",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
 
 
 class ResourceAlreadyExistsError(TRINETRAException):

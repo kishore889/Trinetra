@@ -1,4 +1,4 @@
-﻿"""
+"""
 TRINETRA — Database Models
 Core models representing emails, identities, intelligence signals, graph entities, incidents, and feedback.
 """
@@ -24,7 +24,14 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import UUID
+
+# Generic JSON type for cross-db compatibility (PostgreSQL JSONB / SQLite JSON)
+JSONB = JSON
+
+
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -42,6 +49,10 @@ class EmailState(str, enum.Enum):
     ACTION_PENDING = "ACTION_PENDING"
     ACTIONED = "ACTIONED"
     FAILED = "FAILED"
+    QUARANTINED = "QUARANTINED"
+    RELEASED = "RELEASED"
+    SAFE = "SAFE"
+    REVIEW = "REVIEW"
 
 
 class Severity(str, enum.Enum):
@@ -280,17 +291,27 @@ class GraphRelationship(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
 
 class Feedback(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    """Human-in-the-loop analyst feedback on detections."""
+    """Human-in-the-loop analyst feedback on detections.
+
+    Audit columns:
+      analyst_name   — display name of the reviewer (who)
+      classification — TP/FP/TN/FN verdict (what)
+      reviewed_at    — timestamp of review (when)
+      comments       — analyst rationale (why)
+      review_source  — UI surface that submitted the review (audit context)
+    """
     __tablename__ = "feedbacks"
 
     detection_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("detections.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     analyst_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    analyst_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)   # WHO — denormalised for fast audit display
     classification: Mapped[FeedbackClassification] = mapped_column(
         Enum(FeedbackClassification, name="feedback_classification_enum", native_enum=False),
         nullable=False,
     )
-    comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)               # WHY
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # WHEN
+    review_source: Mapped[str] = mapped_column(String(100), default="REVIEW_QUEUE", nullable=False)  # audit context
 
     detection: Mapped["Detection"] = relationship("Detection", back_populates="feedback")
     analyst: Mapped["User"] = relationship("User", back_populates="feedbacks")
@@ -319,3 +340,21 @@ class Incident(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     email: Mapped["Email"] = relationship("Email", back_populates="incident")
     assignee: Mapped[Optional["User"]] = relationship("User", back_populates="assigned_incidents")
+
+
+class ActionAudit(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """Audit log of all automated and analyst-initiated Gmail response actions."""
+    __tablename__ = "action_audits"
+
+    email_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("emails.id", ondelete="SET NULL"), nullable=True, index=True)
+    message_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    action: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    previous_state: Mapped[str] = mapped_column(String(50), nullable=False)
+    new_state: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    details: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
+    email: Mapped[Optional["Email"]] = relationship("Email")
+

@@ -1,4 +1,4 @@
-﻿"""
+"""
 TRINETRA — Database Session Management
 
 Provides SQLAlchemy engine and session factory with connection pooling.
@@ -8,21 +8,52 @@ Includes dependency injection helper `get_db` for FastAPI endpoints.
 from __future__ import annotations
 
 from typing import Generator
-
-from sqlalchemy import create_engine
+import logging
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 
-# Engine configuration with pooling
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
-    pool_pre_ping=True,
-    echo=settings.DEBUG,
-)
+logger = logging.getLogger(__name__)
+
+
+def _create_resilient_engine():
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("sqlite"):
+        return create_engine(
+            db_url,
+            connect_args={"check_same_thread": False},
+            echo=settings.DEBUG,
+        )
+
+    try:
+        eng = create_engine(
+            db_url,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+            pool_pre_ping=True,
+            echo=settings.DEBUG,
+        )
+        # Verify connection
+        with eng.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return eng
+    except Exception as exc:
+        logger.warning(
+            "Primary database connection (%s) failed: %s. Falling back to local SQLite database (sqlite:///./trinetra_dev.db).",
+            db_url,
+            exc,
+        )
+        return create_engine(
+            "sqlite:///./trinetra_dev.db",
+            connect_args={"check_same_thread": False},
+            echo=settings.DEBUG,
+        )
+
+
+# Engine configuration
+engine = _create_resilient_engine()
 
 # Session factory
 SessionLocal = sessionmaker(

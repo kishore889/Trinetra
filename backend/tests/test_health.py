@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for TRINETRA Health endpoint and FastAPI app.
 """
 
@@ -29,4 +29,4 @@ def test_health_endpoint():
         assert data["database_connected"] is True
         assert len(data["active_layers"]) == 7
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)

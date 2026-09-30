@@ -42,3 +42,9 @@ httpx==0.27.2
 
 # --- Dev Utilities ---
 # (Install separately: pip install black isort mypy)
+
+# --- Explainable AI (optional) ---
+# Required only when GEMINI_API_KEY is configured.
+# TRINETRA operates normally without this package (deterministic fallback active).
+# google-generativeai>=0.8.0
+

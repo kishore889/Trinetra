@@ -1,4 +1,4 @@
-﻿"""
+"""
 TRINETRA — Application Configuration
 
 Uses Pydantic Settings for type-safe, environment-variable-driven configuration.
@@ -10,10 +10,19 @@ from __future__ import annotations
 
 import secrets
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
+_ROOT_DIR = _BASE_DIR.parent  # TRINETRA/
+_ENV_FILES = [
+    str(_BASE_DIR / ".env"),
+    str(_ROOT_DIR / ".env"),
+    ".env",
+]
 
 
 class Settings(BaseSettings):
@@ -23,7 +32,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

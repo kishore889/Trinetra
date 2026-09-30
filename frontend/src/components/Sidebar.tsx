@@ -14,7 +14,11 @@ import {
   HeartPulse, 
   Sparkles,
   Eye,
-  UserCheck
+  UserCheck,
+  Target,
+  Bell,
+  Server,
+  ClipboardCheck,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -30,6 +34,8 @@ export const Sidebar: React.FC = () => {
       title: 'THREAT INTELLIGENCE',
       items: [
         { name: 'Threats', path: '/threats', icon: ShieldAlert },
+        { name: 'Sources', path: '/sources', icon: Server },
+        { name: 'Indicators', path: '/indicators', icon: Target },
         { name: 'Threat Graph', path: '/graph', icon: Share2 }
       ]
     },
@@ -45,6 +51,8 @@ export const Sidebar: React.FC = () => {
     {
       title: 'OPERATIONS',
       items: [
+        { name: 'Alerts', path: '/alerts', icon: Bell },
+        { name: 'Review Queue', path: '/review', icon: ClipboardCheck },
         { name: 'Incidents', path: '/incidents', icon: AlertTriangle },
         { name: 'SOC Co-Pilot', path: '/copilot', icon: Bot },
         { name: 'Demo Center', path: '/demo', icon: Sparkles }

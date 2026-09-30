@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import type { SeverityLevel, DecisionType } from '../types';
 
-export const ThreatBadge: React.FC<{ severity: SeverityLevel }> = ({ severity }) => {
+export const ThreatBadge: React.FC<{ severity: SeverityLevel | string }> = ({ severity }) => {
+  const sevKey = (severity || 'LOW').toUpperCase() as SeverityLevel;
   const styles: Record<SeverityLevel, string> = {
     CRITICAL: 'bg-status-critical/15 text-status-critical border-status-critical/40 shadow-[0_0_8px_rgba(255,92,103,0.3)]',
     HIGH: 'bg-status-high/15 text-status-high border-status-high/40',
@@ -9,23 +10,28 @@ export const ThreatBadge: React.FC<{ severity: SeverityLevel }> = ({ severity })
     LOW: 'bg-status-low/15 text-status-low border-status-low/40',
   };
 
+  const style = styles[sevKey] || styles.LOW;
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider border ${styles[severity]}`}>
-      {severity}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider border ${style}`}>
+      {sevKey}
     </span>
   );
 };
 
-export const DecisionBadge: React.FC<{ decision: DecisionType }> = ({ decision }) => {
+export const DecisionBadge: React.FC<{ decision: DecisionType | string }> = ({ decision }) => {
+  const decKey = (decision || 'ALLOW').toUpperCase() as DecisionType;
   const styles: Record<DecisionType, string> = {
     QUARANTINE: 'bg-status-critical/20 text-status-critical border-status-critical/40',
     WARN: 'bg-status-high/20 text-status-high border-status-high/40',
     ALLOW: 'bg-status-low/20 text-status-low border-status-low/40',
   };
 
+  const style = styles[decKey] || styles.ALLOW;
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${styles[decision]}`}>
-      {decision}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${style}`}>
+      {decKey}
     </span>
   );
 };

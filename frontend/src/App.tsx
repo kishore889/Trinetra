@@ -12,6 +12,17 @@ import { GmailConnectionPage } from './pages/GmailConnectionPage';
 import { GenericPage } from './pages/GenericPages';
 import { IdentityAnalysisPage } from './pages/IdentityAnalysisPage';
 
+import { ResponseActionsPage } from './pages/ResponseActionsPage';
+import { ThreatRegistryPage } from './pages/ThreatRegistryPage';
+import { IncidentsPage } from './pages/IncidentsPage';
+import { SystemHealthPage } from './pages/SystemHealthPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SourcesPage } from './pages/SourcesPage';
+import { IndicatorsPage } from './pages/IndicatorsPage';
+import { AlertsPage } from './pages/AlertsPage';
+import { ReviewQueuePage } from './pages/ReviewQueuePage';
+
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
 
@@ -20,10 +31,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       case '/': return 'SOC Overview Dashboard';
       case '/analytics': return 'Telemetry & Detection Analytics';
       case '/threats': return 'Active Threat Intelligence Feeds';
+      case '/sources': return 'Threat Intelligence Sources & Providers';
+      case '/indicators': return 'IOC Threat Indicator Registry';
       case '/graph': return 'Threat Intelligence Graph Engine';
       case '/live-emails': return 'Live Ingestion Monitoring';
       case '/investigations': return 'Deep Threat Investigation Workspace';
-      case '/quarantine': return 'Quarantined Email Records';
+      case '/quarantine': return 'Gmail Response & Action Engine';
+      case '/alerts': return 'Security Alerts & Notifications';
+      case '/review': return 'Human-in-the-Loop Analyst Review Queue';
       case '/incidents': return 'Security Incident Response';
       case '/copilot': return 'TRINETRA SOC Co-Pilot';
       case '/demo': return 'Interactive Threat Simulation Center';
@@ -54,23 +69,28 @@ export const App: React.FC = () => {
       <Layout>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/analytics" element={<GenericPage title="Analytics & Trends" subtitle="Long-term telemetry and intelligence distribution statistics" />} />
-          <Route path="/threats" element={<GenericPage title="Threat Registry" subtitle="Global and local IOC registries integrated across CERT-In, Safe Browsing, and VT" />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/threats" element={<ThreatRegistryPage />} />
+          <Route path="/sources" element={<SourcesPage />} />
+          <Route path="/indicators" element={<IndicatorsPage />} />
           <Route path="/graph" element={<ThreatGraphPage />} />
           <Route path="/live-emails" element={<LiveEmailsPage />} />
           <Route path="/investigations" element={<InvestigationPage />} />
           <Route path="/analyze/identity" element={<IdentityAnalysisPage />} />
-          <Route path="/quarantine" element={<GenericPage title="Quarantine Vault" subtitle="Isolated high-risk email messages held for compliance and inspection" />} />
-          <Route path="/incidents" element={<GenericPage title="Incident Management" subtitle="Formal incident tracking, escalation protocols, and analyst assignments" />} />
+          <Route path="/quarantine" element={<ResponseActionsPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/review" element={<ReviewQueuePage />} />
+          <Route path="/incidents" element={<IncidentsPage />} />
           <Route path="/copilot" element={<CopilotPage />} />
           <Route path="/demo" element={<DemoCenterPage />} />
           <Route path="/gmail" element={<GmailConnectionPage />} />
-          <Route path="/health" element={<GenericPage title="System Health" subtitle="Real-time status of backend services, PostgreSQL connection, and detection layers" />} />
-          <Route path="/settings" element={<GenericPage title="Platform Settings" subtitle="Risk engine weights, sensitivity thresholds, and notifications" />} />
+          <Route path="/health" element={<SystemHealthPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
   );
 };
+
 
 export default App;

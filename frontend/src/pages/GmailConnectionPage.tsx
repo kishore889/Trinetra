@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Mail, 
   ShieldCheck, 
@@ -40,7 +40,7 @@ export const GmailConnectionPage: React.FC = () => {
   const fetchStatus = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/google/status');
+      const res = await fetch('/api/v1/auth/google/status');
       if (res.ok) {
         const data: AccountStatus = await res.json();
         setAccount(data);
@@ -86,24 +86,26 @@ export const GmailConnectionPage: React.FC = () => {
   const handleConnect = async () => {
     setState('CONNECTING');
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/google/url');
+      const res = await fetch('/api/v1/auth/google/url');
       if (res.ok) {
         const data = await res.json();
         window.location.href = data.authorization_url;
       } else {
+        const errData = await res.json().catch(() => null);
+        const detailMsg = errData?.message || errData?.detail || 'Failed to retrieve OAuth authorization URL. Check if GOOGLE_CLIENT_ID is configured.';
         setState('CONNECTION_ERROR');
-        setErrorMessage('Failed to retrieve OAuth authorization URL. Check if GOOGLE_CLIENT_ID is configured.');
+        setErrorMessage(detailMsg);
       }
     } catch {
       setState('CONNECTION_ERROR');
-      setErrorMessage('Backend API unreachable at http://localhost:8000. Ensure TRINETRA FastAPI server is running.');
+      setErrorMessage('Backend API unreachable at /api/v1/auth/google/url. Ensure TRINETRA FastAPI server is running.');
     }
   };
 
   const handleDisconnect = async () => {
     setIsLoading(true);
     try {
-      await fetch('http://localhost:8000/api/v1/auth/google/disconnect', { method: 'POST' });
+      await fetch('/api/v1/auth/google/disconnect', { method: 'POST' });
     } catch {
       // proceed with local UI disconnect
     } finally {

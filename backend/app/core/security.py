@@ -1,4 +1,4 @@
-﻿"""
+"""
 TRINETRA — Security Utilities
 
 Password hashing, JWT token creation/verification, and security helpers.
@@ -18,8 +18,8 @@ from passlib.context import CryptContext
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError, SSRFDetectedError
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context (pbkdf2_sha256 for cross-platform reliability)
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 # Private IP ranges blocked for SSRF protection
 _PRIVATE_NETWORKS = [
@@ -40,13 +40,18 @@ _BLOCKED_SCHEMES = {"file", "ftp", "data", "javascript", "vbscript"}
 # ==================================================
 
 def hash_password(password: str) -> str:
-    """Hash a plaintext password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a plaintext password using secure PBKDF2-SHA256."""
+    return pwd_context.hash(password[:72])
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 # ==================================================

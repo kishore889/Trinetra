@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for Gmail OAuth helper utilities and endpoints.
 """
 
@@ -41,4 +41,4 @@ def test_oauth_status_endpoint_disconnected():
         assert "access_token" not in data
         assert "refresh_token" not in data
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)

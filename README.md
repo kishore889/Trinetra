@@ -1,246 +1,166 @@
-﻿# TRINETRA
-### AI-Powered Real-Time Phishing Detection & Threat Intelligence System
+# TRINETRA — AI-Powered Real-Time Phishing Detection & Threat Intelligence System
+
+> **Identity:** TRINETRA Dark Teal SOC  
+> **Backend Status:** ✅ 247 / 247 PASSING TESTS  
+> **Frontend Status:** ✅ REACT 18 + VITE BUILD CLEAN  
+> **Security Posture:** ✅ HARDENED (JWT, RBAC, OWASP Headers, SSRF, XSS, Rate Limiting)  
 
 ---
 
 ## Overview
 
-**TRINETRA** is an enterprise-grade, modular phishing detection and threat intelligence platform. It uses multi-layer AI analysis across seven independent intelligence layers to identify, classify, and respond to email-based threats in real time.
+**TRINETRA** is a production-grade, enterprise cybersecurity SOC platform engineered to detect, explain, and autonomously mitigate email phishing attacks in real time.
 
-Unlike a single-model classifier, TRINETRA employs a **multi-signal risk engine** that combines content intelligence, URL/domain analysis, identity spoofing detection, threat intelligence, and graph-based relationship analysis to produce explainable, auditable decisions.
-
----
-
-## Architecture
-
-```
-Gmail
-  ↓  Gmail API / OAuth 2.0
-  ↓  Real-Time Email Ingestion
-  ↓  Email Parser
-  ↓  Content Intelligence          ← Layer 1
-  ↓  URL / Domain Intelligence     ← Layer 2
-  ↓  Sender / Identity Intelligence← Layer 3
-  ↓  Threat Intelligence           ← Layer 4
-  ↓  Graph Intelligence            ← Layer 5
-  ↓  Multi-Signal Risk Engine      ← Layer 6
-  ↓  Explainable AI                ← Layer 7
-  ↓  Decision Engine
-  ↓  ALLOW / WARN / QUARANTINE
-  ↓  TRINETRA SOC Dashboard
-  ↓  Human-in-the-Loop
-  ↓  Incident Report / Audit
-```
+By fusing **5 sub-layers of security intelligence** into a central weighted Risk Engine, TRINETRA provides transparent Explainable AI (XAI) attributions and executes automated Gmail response actions (Quarantine, Trash, Warning Banners, Label Tagging) while empowering analysts through a Human-in-the-Loop (HITL) review workflow.
 
 ---
 
-## Detection Layers
-
-| # | Layer | Description |
-|---|-------|-------------|
-| 1 | Content Intelligence | TF-IDF + ML phishing content classification |
-| 2 | URL / Domain Intelligence | URL extraction, domain reputation, lookalike detection |
-| 3 | Identity / Spoofing Intelligence | SPF/DKIM/DMARC, sender spoofing, brand impersonation |
-| 4 | Threat Intelligence | Local TI DB + optional VirusTotal, Google Safe Browsing |
-| 5 | Graph Intelligence | Relationship mapping via NetworkX (Neo4j-compatible) |
-| 6 | Central Risk Engine | Configurable weighted multi-signal risk computation |
-| 7 | Explainability | Evidence-backed natural language explanations |
-
----
-
-## Technology Stack
-
-### Backend
-| Component | Technology |
-|-----------|-----------|
-| Language | Python 3.11+ |
-| API Framework | FastAPI |
-| Validation | Pydantic v2 |
-| ORM | SQLAlchemy 2.0 |
-| Database | PostgreSQL 16 |
-| Migrations | Alembic |
-| Logging | structlog |
-
-### Frontend
-| Component | Technology |
-|-----------|-----------|
-| Framework | React 18 + TypeScript |
-| Build Tool | Vite |
-| Styling | Tailwind CSS |
-| Components | shadcn/ui |
-| Routing | React Router |
-| Charts | Recharts |
-| Graph Viz | React Flow |
-| Icons | Lucide Icons |
-
-### ML & Intelligence
-| Component | Technology |
-|-----------|-----------|
-| Baseline Classifier | TF-IDF + Logistic Regression |
-| Semantic Layer | sentence-transformers (optional) |
-| Explanations | Gemini API (assist only, not classifier) |
-| Graph Engine | NetworkX → Neo4j compatible |
-
-### Google Integrations
-| Component | Role |
-|-----------|------|
-| Gmail API | Email access |
-| Google OAuth 2.0 | Authentication |
-| Gmail Watch | Real-time push triggers |
-| Google Cloud Pub/Sub | Event delivery |
-| Gmail History API | Delta sync |
-
----
-
-## Email Lifecycle States
+## Architecture Overview
 
 ```
-RECEIVED → PARSING → ANALYZING → ANALYZED → ACTION_PENDING → ACTIONED
-                                                                    ↓
-                                                                 FAILED
-```
-
-## Decision Outputs
-
-| Severity | Decision |
-|----------|----------|
-| LOW / MEDIUM / HIGH / CRITICAL | ALLOW / WARN / QUARANTINE |
-
-> Emails are **never permanently deleted** automatically.
-
----
-
-## Project Structure
-
-```
-TRINETRA/
-├── backend/                # FastAPI backend application
-│   ├── app/
-│   │   ├── api/            # API route definitions
-│   │   ├── core/           # Config, logging, security, exceptions
-│   │   ├── db/             # Database base + session management
-│   │   ├── models/         # SQLAlchemy ORM models
-│   │   ├── schemas/        # Pydantic request/response schemas
-│   │   ├── services/       # Business logic services
-│   │   ├── engines/        # Intelligence engine interfaces
-│   │   ├── providers/      # Threat intelligence provider interfaces
-│   │   └── graph/          # Graph engine interfaces
-│   ├── alembic/            # Database migrations
-│   └── tests/              # Backend tests
-├── frontend/               # React + TypeScript frontend (Phase 3+)
-├── data/                   # Local threat intelligence data
-├── models/                 # Trained ML model artifacts
-├── scripts/                # Utility scripts
-├── docs/                   # Architecture and phase documentation
-├── tests/                  # Integration tests
-└── docker/                 # Docker configuration
+Incoming Email ──▶ Ingestion & MIME Parser
+                         │
+        ┌────────────────┼────────────────┬────────────────┐
+        ▼                ▼                ▼                ▼
+  [ Content NLP ]  [ URL Intelligence ] [ Identity Engine ] [ Threat Intel ]
+  (TF-IDF + ML)   (Homoglyphs, Typos)  (Domain/SPF/DKIM)  (CERT-In, VT, SB)
+        │                │                │                │
+        └────────────────┴────────┬───────┴────────────────┘
+                                  ▼
+                    [ Graph Entity Correlation ]
+                    (NetworkX / Neo4j Entity Map)
+                                  │
+                                  ▼
+                   [ Central Multi-Signal Risk Engine ]
+                   (Weighted Scores + Decision Matrix)
+                                  │
+                                  ▼
+                   [ Explainable AI Layer (XAI) ]
+                   (Natural Language + Key Evidence)
+                                  │
+                                  ▼
+                   [ Automated Gmail Response Actions ]
+                   (Quarantine, Warning, Label, Audit)
 ```
 
 ---
 
-## Quick Start
+## Technical Stack
 
-### Prerequisites
-- Python 3.11+
-- PostgreSQL 16
-- Docker & Docker Compose (recommended)
+- **Frontend**: React 18, Vite, TypeScript, Lucide Icons, TailwindCSS (Dark Teal SOC aesthetic).
+- **Backend**: FastAPI, Python 3.11, Pydantic v2, Passlib (PBKDF2-SHA256), PyJWT.
+- **Database**: PostgreSQL 16 / SQLite via SQLAlchemy 2.0 ORM.
+- **Machine Learning & NLP**: Scikit-Learn (TF-IDF vectorizer + Classifier), Regex Heuristic Intent Analyzers.
+- **Graph Intelligence**: NetworkX / Neo4j entity graph correlation.
+- **Threat Intelligence**: CERT-In Advisories, VirusTotal v3, Google Safe Browsing v4, Local IOC DB.
+- **Containerization**: Docker, Docker Compose, Nginx.
 
-### Setup (Docker)
+---
+
+## Quick Start (Local Development)
+
+### 1. Backend
 
 ```bash
-# 1. Copy environment configuration
-cp .env.example .env
-# Edit .env with your configuration
-
-# 2. Start services
-docker-compose up -d
-
-# 3. Run database migrations
-docker-compose exec backend alembic upgrade head
-
-# 4. Verify health
-curl http://localhost:8000/api/v1/health
-```
-
-### Setup (Local Development)
-
-```bash
-# 1. Set up Python environment
 cd backend
 python -m venv venv
-venv\Scripts\activate          # Windows
-source venv/bin/activate        # macOS/Linux
+# PowerShell (Windows):
+.\venv\Scripts\Activate.ps1
+# Bash (Linux/macOS):
+source venv/bin/activate
 
-# 2. Install dependencies
 pip install -r requirements.txt
-
-# 3. Configure environment
-cp ../.env.example .env
-# Edit .env
-
-# 4. Run migrations
-alembic upgrade head
-
-# 5. Start development server
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### Running Tests
+### 2. Frontend
 
 ```bash
-cd backend
-pytest tests/ -v --cov=app --cov-report=term-missing
+cd frontend
+npm install
+npm run dev
 ```
 
----
-
-## API Documentation
-
-Once running, visit:
-- **Swagger UI:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
-- **Health Check:** http://localhost:8000/api/v1/health
+Visit `http://localhost:5173` for the TRINETRA SOC Dashboard.
 
 ---
 
-## Security
+## Quick Start (Docker Compose)
 
-TRINETRA implements:
-- OAuth 2.0 for Gmail authentication (secrets never stored in plaintext)
-- SSRF protection for URL analysis
-- Input validation on all endpoints
-- SQL injection prevention via ORM
-- Rate limiting
-- Secure headers
-- Audit logging
+```bash
+cp .env.example .env
+docker-compose up --build -d
+```
 
----
-
-## Phase Roadmap
-
-| Phase | Title | Status |
-|-------|-------|--------|
-| 1 | Architecture Lock + Backend Foundation | ✅ Complete |
-| 2 | Gmail Integration + Email Ingestion | 🔜 Planned |
-| 3 | Frontend Foundation (SOC Dashboard) | 🔜 Planned |
-| 4 | Content Intelligence Layer | 🔜 Planned |
-| 5 | URL / Domain Intelligence Layer | 🔜 Planned |
-| 6 | Identity / Spoofing Intelligence | 🔜 Planned |
-| 7 | Threat Intelligence Layer | 🔜 Planned |
-| 8 | Graph Intelligence Layer | 🔜 Planned |
-| 9 | Multi-Signal Risk Engine | 🔜 Planned |
-| 10 | Explainable AI Layer | 🔜 Planned |
-| 11 | Decision Engine | 🔜 Planned |
-| 12 | Human-in-the-Loop | 🔜 Planned |
-| 13 | Incident Management | 🔜 Planned |
-| 14 | SOC Dashboard (Advanced) | 🔜 Planned |
-| 15 | Demo Center | 🔜 Planned |
-| 16 | Production Hardening | 🔜 Planned |
-| 17 | Performance & Scale | 🔜 Planned |
-| 18 | Final Integration & Audit | 🔜 Planned |
+- **TRINETRA UI**: `http://localhost:5173`
+- **FastAPI API & OpenAPI Docs**: `http://localhost:8000/docs`
 
 ---
 
-## License
+## Local Development & Clean Startup Commands
 
-TRINETRA — Proprietary. All rights reserved.
+### 1. Backend (FastAPI + Uvicorn)
+```bash
+# Terminal 1: Navigate to backend and activate virtualenv
+cd backend
+.\venv\Scripts\Activate.ps1    # On Windows PowerShell
+# or: source venv/bin/activate  # On Linux/macOS
+
+# Start Uvicorn Server
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+- Root Service Identity: `http://localhost:8000/`
+- Health Endpoint: `http://localhost:8000/health`
+- Interactive Swagger UI: `http://localhost:8000/docs`
+- OpenAPI Specification: `http://localhost:8000/api/v1/openapi.json`
+
+### 2. Frontend (React + Vite)
+```bash
+# Terminal 2: Navigate to frontend
+cd frontend
+npm install
+npm run dev
+```
+- Web Application Console: `http://localhost:5173/`
+- Reverse Proxy: Requests to `/api/...` and `/docs` automatically proxy to `http://127.0.0.1:8000`.
+
+---
+
+## Environment Variables & Configuration
+
+Configuration is managed via `.env` (loaded automatically from project root or `backend/`).
+
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| `APP_ENV` | Application environment (`development` / `production`) | `development` |
+| `DEBUG` | Enable debug logs and telemetry | `true` |
+| `SECRET_KEY` | Hex encryption key for internal session tokens | Pre-generated 64-char hex string |
+| `DATABASE_URL` | Primary database URI (PostgreSQL or SQLite fallback) | `sqlite:///./trinetra_dev.db` |
+| `GOOGLE_CLIENT_ID` | Google Cloud OAuth 2.0 Web Client ID | Configured via GCP Console |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud OAuth 2.0 Client Secret | Configured via GCP Console |
+| `GOOGLE_REDIRECT_URI` | Authorized OAuth Redirect URI | `http://localhost:8000/api/v1/auth/google/callback` |
+| `GOOGLE_CLOUD_PROJECT` | GCP Project ID for Gmail Watch Pub/Sub | `trinetra-soc` |
+| `GOOGLE_PUBSUB_TOPIC` | Pub/Sub topic for push notifications | `projects/trinetra-soc/topics/gmail-events` |
+| `GEMINI_API_KEY` | Google Gemini API key for Natural Language XAI | Optional (fallback to deterministic synthesis) |
+| `VIRUSTOTAL_API_KEY` | VirusTotal API v3 key | Optional |
+| `GOOGLE_SAFE_BROWSING_API_KEY` | Google Safe Browsing API v4 key | Optional |
+
+---
+
+## Detailed Documentation (`/docs`)
+
+1. [System Architecture](docs/architecture.md)
+2. [Database Schema](docs/database_schema.md)
+3. [REST API Reference](docs/api_documentation.md)
+4. [Local Setup Guide](docs/local_setup.md)
+5. [Environment Variables](docs/environment_variables.md)
+6. [Gmail OAuth 2.0 Setup](docs/gmail_oauth_setup.md)
+7. [Gmail Watch & Cloud Pub/Sub](docs/pubsub_setup.md)
+8. [CERT-In Threat Intelligence](docs/cert_in_setup.md)
+9. [Machine Learning & NLP](docs/ml_training.md)
+10. [Graph Intelligence Architecture](docs/graph_architecture.md)
+11. [Central Risk Engine](docs/risk_engine.md)
+12. [Human-in-the-Loop Review Queue](docs/human_in_loop.md)
+13. [Security & Production Controls](docs/security.md)
+14. [Deployment Guide (Docker & Cloud Run)](docs/deployment.md)
+15. [Troubleshooting Guide](docs/troubleshooting.md)

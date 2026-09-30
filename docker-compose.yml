@@ -1,7 +1,9 @@
-﻿version: "3.9"
+version: "3.9"
 
 # ==================================================
-# TRINETRA — Docker Compose
+# TRINETRA — Docker Compose Architecture
+# Services: PostgreSQL, FastAPI Backend, React Frontend
+# Optional Future Services: Redis, Neo4j
 # ==================================================
 
 services:
@@ -30,7 +32,7 @@ services:
       - trinetra_net
 
   # ------------------------------------------------
-  # TRINETRA Backend (FastAPI)
+  # TRINETRA Backend (FastAPI + Risk Engine + Threat Providers)
   # ------------------------------------------------
   backend:
     build:
@@ -43,9 +45,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://trinetra:${POSTGRES_PASSWORD:-trinetra_dev}@db:5432/trinetra
-      APP_ENV: ${APP_ENV:-development}
-      DEBUG: ${DEBUG:-true}
-      SECRET_KEY: ${SECRET_KEY:-changeme_in_production}
+      APP_ENV: ${APP_ENV:-production}
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SECRET_KEY:-super_secret_jwt_key_trinetra_2026}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -63,18 +65,49 @@ services:
       com.trinetra.service: "backend"
       com.trinetra.version: "1.0.0"
 
-# ------------------------------------------------
-# Frontend (Phase 3+) — placeholder
-# ------------------------------------------------
-# frontend:
-#   build:
-#     context: ./frontend
-#     dockerfile: ../docker/Dockerfile.frontend
-#   container_name: trinetra_frontend
-#   ports:
-#     - "5173:5173"
-#   networks:
-#     - trinetra_net
+  # ------------------------------------------------
+  # TRINETRA Frontend (React + Vite + Tailwind + Dark Teal SOC UI)
+  # ------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: trinetra_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - trinetra_net
+    labels:
+      com.trinetra.service: "frontend"
+      com.trinetra.version: "1.0.0"
+
+  # ------------------------------------------------
+  # Optional Future Infrastructure: Redis Cache / PubSub
+  # ------------------------------------------------
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: trinetra_redis
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - trinetra_net
+
+  # ------------------------------------------------
+  # Optional Future Infrastructure: Neo4j Graph DB
+  # ------------------------------------------------
+  # neo4j:
+  #   image: neo4j:5-community
+  #   container_name: trinetra_neo4j
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   environment:
+  #     NEO4J_AUTH: neo4j/trinetra_password
+  #   networks:
+  #     - trinetra_net
 
 volumes:
   trinetra_pgdata:
